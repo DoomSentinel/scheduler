@@ -91,7 +91,7 @@ func TestRetryNetworkError(t *testing.T) {
 
 	res, err := req.Send()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "target machine actively refused")
+	require.Contains(t, err.Error(), "refused")
 	require.False(t, res.Ok)
 	require.Equal(t, 0, res.StatusCode)
 }
