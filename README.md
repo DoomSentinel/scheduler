@@ -40,7 +40,7 @@ You can install example application by running
 
 ``GO111MODULE=on go get github.com/DoomSentinel/scheduler/cmd/scheduler-example``
 
-####Usage
+#### Usage
 ```
   scheduler-example --host=0.0.0.0 --port=8245  
 ```
