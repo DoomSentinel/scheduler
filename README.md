@@ -23,6 +23,7 @@ can be scheduled up to ~47days from its publication date
 ``
 docker-compose up -d --build
 ``
+
 By default, service will be available on port ``8245`` via grpc, monitoring via 
 grafana on port ``3000``.
 Raw prometheus metrics exposed on ``0.0.0.0:8457/metrics``.
@@ -38,6 +39,7 @@ Project includes ``client`` package for external integrations
 You can install example application by running
 
 ``GO111MODULE=on go get github.com/DoomSentinel/scheduler/cmd/scheduler-example``
+
 ####Usage
 ```
   scheduler-example --host=0.0.0.0 --port=8245  
@@ -61,4 +63,4 @@ in project root
 ## Project maturity
 
 Currently, not battle tested - therefore not ready for production usage. 
-Need more ~~vespene gas~~ tests.
+Needs more ~~vespene gas~~ tests.
