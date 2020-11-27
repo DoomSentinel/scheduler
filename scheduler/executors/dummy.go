@@ -31,6 +31,9 @@ func (r Dummy) Type() types.TaskType {
 }
 
 func (r Dummy) Run(_ context.Context, task *types.Task) (types.Result, error) {
+	if task == nil {
+		return nil, ErrInvalidTask
+	}
 	output, err := json.MarshalIndent(task, "", " ")
 	if err != nil {
 		return nil, err

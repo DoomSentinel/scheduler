@@ -42,6 +42,7 @@ func Run(in ApplicationParams) {
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
+			_ = in.Monitor.GracefulStop()
 			return in.Scheduler.Shutdown()
 		},
 	})

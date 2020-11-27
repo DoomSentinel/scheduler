@@ -3,7 +3,6 @@ package executors
 import (
 	"bytes"
 	"context"
-	"errors"
 	"os/exec"
 	"time"
 
@@ -29,8 +28,8 @@ func (r Command) Type() types.TaskType {
 }
 
 func (r Command) Run(ctx context.Context, task *types.Task) (types.Result, error) {
-	if task.Command == nil {
-		return nil, errors.New("invalid command")
+	if task == nil || task.Command == nil {
+		return nil, ErrInvalidTask
 	}
 
 	c, cancel := context.WithTimeout(ctx, time.Duration(task.Command.Timeout)*time.Second)

@@ -22,6 +22,12 @@ func TestNewRemoteHttp(t *testing.T) {
 	require.Implements(t, new(types.Executor), executor)
 }
 
+func TestRemoteHTTP_Type(t *testing.T) {
+	executor := NewRemoteHttp(NewRemoteHTTPClient())
+	require.NotNil(t, executor)
+	require.Equal(t, types.TaskTypeRemote, executor.Type())
+}
+
 func TestRemoteHTTP_Run_Success(t *testing.T) {
 	expectedReply := []byte("all is good? or is it ?")
 

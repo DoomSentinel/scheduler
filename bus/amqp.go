@@ -118,22 +118,12 @@ func (a *AMQP) ConsumeNotifications() (<-chan amqp.Delivery, error) {
 		return nil, err
 	}
 
-	messages, err := a.readSession.Consume(queue.Name, "", true, true, false, false, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return messages, nil
+	return a.readSession.Consume(queue.Name, "", true, true, false, false, nil)
 }
 
 func (a *AMQP) ConsumeTasks() (<-chan amqp.Delivery, error) {
-	messages, err := a.readSession.Consume(DelayedQueue, "", false,
+	return a.readSession.Consume(DelayedQueue, "", false,
 		false, false, false, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return messages, nil
 }
 
 func (a *AMQP) setup() error {
@@ -146,14 +136,7 @@ func (a *AMQP) setup() error {
 		return err
 	}
 
-	q, err := a.writeSession.QueueDeclare(
-		DelayedQueue, // name
-		true,         // durable
-		false,        // delete when unused
-		false,        // exclusive
-		false,        // no-wait
-		nil,          // arguments
-	)
+	q, err := a.writeSession.QueueDeclare(DelayedQueue, true, false, false, false, nil)
 	if err != nil {
 		return err
 	}
@@ -172,20 +155,20 @@ func (a *AMQP) handleErrors() {
 		select {
 		case err, ok := <-a.readSession.closeChan:
 			if ok {
-				a.log.Error("amqp read connection error: %v", zap.Error(err))
+				a.log.Error("amqp read connection error", zap.Error(err))
 			}
 			sError := a.shutdowner.Shutdown()
 			if err != nil {
-				a.log.Error("unable to shut down: %v", zap.Error(sError))
+				a.log.Error("unable to shut down", zap.Error(sError))
 			}
 			return
 		case err, ok := <-a.writeSession.closeChan:
 			if ok {
-				a.log.Error("amqp write connection error: %v", zap.Error(err))
+				a.log.Error("amqp write connection error", zap.Error(err))
 			}
 			sError := a.shutdowner.Shutdown()
 			if err != nil {
-				a.log.Error("unable to shut down: %v", zap.Error(sError))
+				a.log.Error("unable to shut down", zap.Error(sError))
 			}
 			return
 		}

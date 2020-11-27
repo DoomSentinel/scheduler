@@ -36,7 +36,12 @@ Generated API and ``*.proto`` files are available [here](https://github.com/Doom
 Project includes ``client`` package for external integrations 
 
 You can install example application by running
-``GO111MODULE=on go get https://github.com/DoomSentinel/scheduler/cmd/scheduler-example``
+
+``GO111MODULE=on go get github.com/DoomSentinel/scheduler/cmd/scheduler-example``
+####Usage
+```
+  scheduler-example --host=0.0.0.0 --port=8245  
+```
 
 ## Configuration
 

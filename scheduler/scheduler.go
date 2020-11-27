@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/json-iterator/go"
+	"github.com/streadway/amqp"
 	"go.uber.org/atomic"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -22,6 +23,10 @@ import (
 var Module = fx.Options(
 	executors.Module,
 	fx.Provide(
+		//Wrap concrete type to a one we will use in package
+		func(bus *bus.AMQP) AMQP {
+			return bus
+		},
 		NewScheduler,
 	),
 )
@@ -37,16 +42,25 @@ const (
 )
 
 type (
+	AMQP interface {
+		ConsumeTasks() (<-chan amqp.Delivery, error)
+		PublishNotification(body []byte) error
+		ConsumeNotifications() (<-chan amqp.Delivery, error)
+		PublishDelayed(body []byte, delay time.Duration, headers map[string]interface{}) error
+	}
+)
+
+type (
 	Params struct {
 		fx.In
 		Executors []types.Executor `group:"executors"` // group from const types.ExecutorsGroup
 
-		Bus     *bus.AMQP
+		Bus     AMQP
 		Log     *zap.Logger
 		Metrics monitoring.SchedulerMetrics
 	}
 	Scheduler struct {
-		bus     *bus.AMQP
+		bus     AMQP
 		log     *zap.Logger
 		metrics monitoring.SchedulerMetrics
 
@@ -54,6 +68,7 @@ type (
 
 		stopChan     chan struct{}
 		shuttingDown *atomic.Bool
+		running      *atomic.Bool
 		wg           sync.WaitGroup
 	}
 )
@@ -70,13 +85,14 @@ func NewScheduler(p Params) *Scheduler {
 		log:          p.Log,
 		stopChan:     make(chan struct{}),
 		shuttingDown: atomic.NewBool(false),
+		running:      atomic.NewBool(false),
 		metrics:      p.Metrics,
 	}
 }
 
 func (s *Scheduler) ScheduleTask(taskType types.TaskType, task *types.Task) error {
 	body, err := json.Marshal(task)
-	if err != nil {
+	if err != nil || task == nil {
 		return fmt.Errorf("unable to marshal task: %v", err)
 	}
 
@@ -98,11 +114,13 @@ func (s *Scheduler) Start() error {
 		return errors.New("unable to start scheduler: shutting down")
 	}
 
+	s.running.Store(true)
 	go s.listen()
 
 	return nil
 }
 
+//Subscribe for temporary notifications queue for usage in requested callbacks
 func (s *Scheduler) ReceiveNotifications(ctx context.Context) (<-chan *types.ExecutionInfo, error) {
 	receiver := make(chan *types.ExecutionInfo)
 	messages, err := s.bus.ConsumeNotifications()
@@ -138,11 +156,15 @@ func (s *Scheduler) ReceiveNotifications(ctx context.Context) (<-chan *types.Exe
 	return receiver, nil
 }
 
+func (s *Scheduler) Running() bool {
+	return s.running.Load()
+}
+
 func (s *Scheduler) Shutdown() error {
 	if !s.shuttingDown.CAS(false, true) {
 		return errors.New("scheduler is already shutting down")
 	}
-
+	s.running.Store(false)
 	close(s.stopChan)
 	s.wg.Wait()
 	return nil
@@ -227,6 +249,7 @@ func (s *Scheduler) notifyExecutionStatus(info types.ExecutionInfo) error {
 	if err != nil {
 		return err
 	}
+
 	return s.bus.PublishNotification(bytes)
 }
 

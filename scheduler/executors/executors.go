@@ -26,4 +26,5 @@ var Module = fx.Provide(
 
 var (
 	ErrUnexpectedStatusCode = errors.New("received unexpected status code")
+	ErrInvalidTask          = errors.New("invalid task")
 )

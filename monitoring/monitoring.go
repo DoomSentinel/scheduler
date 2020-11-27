@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -42,21 +41,16 @@ type (
 	}
 
 	monitor struct {
-		config *config.MonitoringConfig
-		echo   *echo.Echo
-
+		config          *config.MonitoringConfig
+		echo            *echo.Echo
 		isServerStarted bool
-
-		err          error
-		serverErrors chan error
-		once         sync.Once
+		err             error
 	}
 )
 
 func New(conf config.MonitoringConfig) Monitor {
 	return &monitor{
-		config:       &conf,
-		serverErrors: make(chan error),
+		config: &conf,
 	}
 }
 
@@ -104,10 +98,6 @@ func (m *monitor) Start() error {
 }
 
 func (m *monitor) GracefulStop() error {
-	defer m.once.Do(func() {
-		close(m.serverErrors)
-	})
-
 	if m.echo == nil {
 		return fmt.Errorf("stopping server: %v", ErrServerNotSpecified)
 	}
@@ -128,18 +118,12 @@ func (m *monitor) Error() error {
 
 func (m *monitor) runHttpServer() error {
 	m.isServerStarted = true
-
-	go func(errorCh chan error) {
-		if err := m.echo.Start(fmt.Sprintf("%s:%d", m.config.Host, m.config.Port)); err != nil {
-			if err != http.ErrServerClosed {
-				errorCh <- fmt.Errorf("monitoring server failure: %v", err)
-			}
+	if err := m.echo.Start(fmt.Sprintf("%s:%d", m.config.Host, m.config.Port)); err != nil {
+		if err != http.ErrServerClosed {
+			return err
 		}
-	}(m.serverErrors)
-
-	for err := range m.serverErrors {
 		m.isServerStarted = false
-		return err
 	}
+
 	return nil
 }
