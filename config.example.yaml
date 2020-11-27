@@ -1,0 +1,14 @@
+api:
+  grpc:
+    host: 0.0.0.0
+    port: 8245
+amqp:
+  host: 127.0.0.1
+  port: 5672
+  user: 'guest'
+  password: 'guest'
+monitoring:
+  host: 0.0.0.0
+  port: 8457
+debug:
+  debug: false

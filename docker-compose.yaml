@@ -1,0 +1,50 @@
+version: "3"
+
+services:
+  rabbitmq:
+    image: heidiks/rabbitmq-delayed-message-exchange:3.8.9-management
+    command: rabbitmq-server
+    expose:
+      - 5672
+      - 15672
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 5s
+      timeout: 15s
+      retries: 3
+  scheduler:
+      build: .
+      restart: on-failure
+      environment:
+        - DEBUG_DEBUG=true
+        - AMQP_HOST=rabbitmq
+        - API_GRPC_PORT=8245
+        - AMQP_PORT=5672
+        - AMQP_USER=guest
+        - AMQP_PASSWORD=guest
+        - MONITORING_PORT=8457
+      depends_on:
+        - rabbitmq
+      expose:
+        - 8245
+        - 8457
+      ports:
+        - "8245:8245"
+        - "8457:8457"
+  prometheus:
+    build: './build/prometheus'
+    container_name: 'prometheus'
+    ports:
+      - '9090:9090'
+  grafana:
+    build: './build/grafana'
+    container_name: 'grafana'
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ORG_ROLE=viewer
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - '3000:3000'
