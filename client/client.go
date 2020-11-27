@@ -163,7 +163,7 @@ func (s *schedulerClient) ExecutionNotifications(ctx context.Context) (<-chan *E
 	errorsChan := make(chan error)
 	str, err := s.client.ExecutionNotifications(ctx, new(schedulerV1.ExecutionNotificationsRequest))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, makeGRPCError(err)
 	}
 
 	go func() {
@@ -278,7 +278,7 @@ func (e *GRPCError) Error() string {
 		buf := bytes.Buffer{}
 		buf.WriteString("invalid input: ")
 		for field, violations := range e.violations {
-			buf.WriteString("field " + field + "[" + strings.Join(violations, " | ") + "]")
+			buf.WriteString("field " + field + ": [" + strings.Join(violations, " | ") + "]")
 		}
 		return buf.String()
 	}
