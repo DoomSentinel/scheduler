@@ -16,7 +16,7 @@
   "gnetId": 9186,
   "graphTooltip": 0,
   "id": 1,
-  "iteration": 1606426078261,
+  "iteration": 1606673839244,
   "links": [],
   "panels": [
     {
@@ -136,14 +136,32 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "decimals": 0,
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
-      "fill": 1,
-      "fillGradient": 0,
+      "fill": 3,
+      "fillGradient": 1,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -153,13 +171,15 @@
       "hiddenSeries": false,
       "id": 42,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
-        "total": false,
-        "values": false
+        "rightSide": true,
+        "show": true,
+        "total": true,
+        "values": true
       },
       "lines": true,
       "linewidth": 2,
@@ -178,28 +198,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(scheduler_processed_total[$interval])) by (task_type)",
+          "expr": "sum(rate(scheduler_processed_total[$interval]))",
           "instant": false,
           "interval": "",
-          "legendFormat": "Processed {{task_type}}",
+          "legendFormat": "Processed",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(scheduler_scheduled_total[$interval])) by (task_type)",
+          "expr": "sum(rate(scheduler_scheduled_total[$interval]))",
           "interval": "",
-          "legendFormat": "Scheduled {{task_type}}",
+          "legendFormat": "Scheduled",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(scheduler_success_total[$interval])) by (task_type)",
+          "expr": "sum(rate(scheduler_success_total[$interval]))",
           "interval": "",
-          "legendFormat": "Success {{task_type}}",
+          "legendFormat": "Success",
           "refId": "C"
         },
         {
           "expr": "sum(rate(scheduler_failed_total[$interval])) by (task_type)",
           "interval": "",
-          "legendFormat": "Failed {{task_type}}",
+          "legendFormat": "Failed",
           "refId": "D"
         }
       ],
@@ -389,7 +409,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 8,
+        "w": 5,
         "x": 4,
         "y": 9
       },
@@ -425,6 +445,94 @@
     },
     {
       "cacheTimeout": null,
+      "datasource": "prom1",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "mappings": [
+            {
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
+            }
+          ],
+          "max": 100,
+          "min": 0,
+          "noValue": "100",
+          "nullValueMode": "connected",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              },
+              {
+                "color": "semi-dark-red",
+                "value": 60
+              },
+              {
+                "color": "light-red",
+                "value": 70
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "dark-green",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 9,
+        "y": 9
+      },
+      "id": 44,
+      "interval": null,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": false
+      },
+      "pluginVersion": "7.3.4",
+      "targets": [
+        {
+          "expr": "sum(rate(scheduler_processed_total{job=\"$job\"}[$interval]))/sum(rate(scheduler_success_total{job=\"$job\"}[$interval]))*100",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Scheduler Success Rate",
+      "type": "gauge"
+    },
+    {
+      "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": false,
       "colors": [
@@ -450,8 +558,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 7,
-        "x": 12,
+        "w": 5,
+        "x": 14,
         "y": 9
       },
       "id": 14,
@@ -579,7 +687,9 @@
         {
           "expr": "(sum(rate(grpc_server_handled_total{job=\"$job\",grpc_type=\"unary\",grpc_code=\"OK\"}[$interval])) + \nsum(rate(grpc_server_handled_total{job=\"$job\",grpc_type=\"unary\",grpc_code=\"NotFound\"}[$interval])) + \nsum(rate(grpc_server_handled_total{job=\"$job\",grpc_type=\"unary\",grpc_code=\"PermissionDenied\"}[$interval])) + \nsum(rate(grpc_server_handled_total{job=\"$job\",grpc_type=\"unary\",grpc_code=\"InvalidArgument\"}[$interval])))\n/ \nsum(rate(grpc_server_started_total{job=\"$job\",grpc_type=\"unary\"}[$interval]))",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -1495,7 +1605,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 30
+            "y": 32
           },
           "hiddenSeries": false,
           "id": 4,
@@ -1602,7 +1712,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 30
+            "y": 32
           },
           "hiddenSeries": false,
           "id": 6,
@@ -1708,7 +1818,7 @@
             "h": 9,
             "w": 12,
             "x": 0,
-            "y": 38
+            "y": 40
           },
           "hiddenSeries": false,
           "id": 8,
@@ -1814,7 +1924,7 @@
             "h": 9,
             "w": 12,
             "x": 12,
-            "y": 38
+            "y": 40
           },
           "hiddenSeries": false,
           "id": 10,
@@ -1915,7 +2025,7 @@
       "type": "row"
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [],
@@ -2134,6 +2244,6 @@
   },
   "timezone": "",
   "title": "Scheduler",
-  "uid": "scheduler",
-  "version": 1
+  "uid": "0ME_KtAGz",
+  "version": 5
 }

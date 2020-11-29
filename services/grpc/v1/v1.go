@@ -5,11 +5,11 @@ import (
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 
-	"github.com/DoomSentinel/scheduler/services/grpc/v1/scheduler_service"
+	"github.com/DoomSentinel/scheduler/services/grpc/v1/schedulerService"
 )
 
 var Module = fx.Options(
-	scheduler_service.Module,
+	schedulerService.Module,
 	fx.Invoke(RegisterGRPCServices),
 )
 

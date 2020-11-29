@@ -7,7 +7,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"github.com/DoomSentinel/scheduler/bus"
+	"github.com/DoomSentinel/scheduler/backends"
 	"github.com/DoomSentinel/scheduler/config"
 	"github.com/DoomSentinel/scheduler/monitoring"
 	"github.com/DoomSentinel/scheduler/services"
@@ -19,7 +19,7 @@ var (
 		config.Module,
 		monitoring.Module,
 		fx.Populate(&logger),
-		bus.Module,
+		backends.Module,
 		services.Module,
 		fx.Invoke(services.Run),
 	)
@@ -36,7 +36,7 @@ func main() {
 		config.Module,
 		monitoring.Module,
 		fx.Populate(&logger),
-		bus.Module,
+		backends.Module,
 		services.Module,
 		fx.Invoke(services.Run),
 	)

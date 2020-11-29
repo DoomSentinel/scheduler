@@ -1,4 +1,4 @@
-package scheduler_service
+package schedulerService
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/DoomSentinel/scheduler/scheduler/types"
-	"github.com/DoomSentinel/scheduler/services/grpc/v1/scheduler_service/mocks"
+	"github.com/DoomSentinel/scheduler/services/grpc/v1/schedulerService/mocks"
 	"github.com/DoomSentinel/scheduler/services/grpc/validation_errors"
 )
 

@@ -14,7 +14,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"github.com/DoomSentinel/scheduler/bus"
+	"github.com/DoomSentinel/scheduler/backends"
 	"github.com/DoomSentinel/scheduler/monitoring"
 	"github.com/DoomSentinel/scheduler/scheduler/executors"
 	"github.com/DoomSentinel/scheduler/scheduler/types"
@@ -24,7 +24,7 @@ var Module = fx.Options(
 	executors.Module,
 	fx.Provide(
 		//Wrap concrete type to a one we will use in package
-		func(bus *bus.AMQP) AMQP {
+		func(bus *backends.AMQP) AMQP {
 			return bus
 		},
 		NewScheduler,
@@ -37,16 +37,12 @@ var (
 	ErrInvalidMessage = errors.New("invalid message format")
 )
 
-const (
-	taskTypeHeader = "x-task-type"
-)
-
 type (
 	AMQP interface {
 		ConsumeTasks() (<-chan amqp.Delivery, error)
 		PublishNotification(body []byte) error
-		ConsumeNotifications() (<-chan amqp.Delivery, error)
-		PublishDelayed(body []byte, delay time.Duration, headers map[string]interface{}) error
+		ConsumeNotifications(ctx context.Context) (<-chan amqp.Delivery, error)
+		PublishDelayed(body []byte, delay time.Duration, messageType string) error
 	}
 )
 
@@ -55,7 +51,7 @@ type (
 		fx.In
 		Executors []types.Executor `group:"executors"` // group from const types.ExecutorsGroup
 
-		Bus     AMQP
+		Backend AMQP
 		Log     *zap.Logger
 		Metrics monitoring.SchedulerMetrics
 	}
@@ -81,7 +77,7 @@ func NewScheduler(p Params) *Scheduler {
 
 	return &Scheduler{
 		executors:    execs,
-		bus:          p.Bus,
+		bus:          p.Backend,
 		log:          p.Log,
 		stopChan:     make(chan struct{}),
 		shuttingDown: atomic.NewBool(false),
@@ -99,9 +95,7 @@ func (s *Scheduler) ScheduleTask(taskType types.TaskType, task *types.Task) erro
 	err = s.bus.PublishDelayed(body,
 		time.Duration(
 			math.Max(0, float64(task.ScheduleOnTimestamp-time.Now().UTC().Unix())),
-		)*time.Second, map[string]interface{}{
-			taskTypeHeader: taskType,
-		})
+		)*time.Second, taskType)
 	if err != nil {
 		return err
 	}
@@ -123,7 +117,7 @@ func (s *Scheduler) Start() error {
 //Subscribe for temporary notifications queue for usage in requested callbacks
 func (s *Scheduler) ReceiveNotifications(ctx context.Context) (<-chan *types.ExecutionInfo, error) {
 	receiver := make(chan *types.ExecutionInfo)
-	messages, err := s.bus.ConsumeNotifications()
+	messages, err := s.bus.ConsumeNotifications(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +181,7 @@ func (s *Scheduler) listen() {
 				return
 			}
 
-			if executor, err := s.getExecutor(message.Headers); err == nil {
+			if executor, err := s.getExecutor(message.Type); err == nil {
 				s.wg.Add(1)
 				go s.processTask(executor, message.Body)
 			} else {
@@ -253,19 +247,10 @@ func (s *Scheduler) notifyExecutionStatus(info types.ExecutionInfo) error {
 	return s.bus.PublishNotification(bytes)
 }
 
-func (s *Scheduler) getExecutor(headers map[string]interface{}) (types.Executor, error) {
-	taskTypeValue, ok := headers[taskTypeHeader]
-	if !ok {
-		return nil, errors.New("malformed message: task type header is empty")
-	}
-	taskType, ok := taskTypeValue.(string)
-	if !ok {
-		return nil, errors.New("malformed message: task type header is not a string")
-	}
-
-	if executor, ok := s.executors[taskType]; ok {
+func (s *Scheduler) getExecutor(messageType string) (types.Executor, error) {
+	if executor, ok := s.executors[messageType]; ok {
 		return executor, nil
 	}
 
-	return nil, fmt.Errorf("unable to find executor for type: %s", taskType)
+	return nil, fmt.Errorf("unable to find executor for type: %s", messageType)
 }

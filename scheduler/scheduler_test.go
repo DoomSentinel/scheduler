@@ -24,7 +24,7 @@ import (
 func TestNewScheduler(t *testing.T) {
 	scheduler := NewScheduler(Params{
 		Executors: nil,
-		Bus:       nil,
+		Backend:   nil,
 		Log:       nil,
 		Metrics:   nil,
 	})
@@ -63,17 +63,13 @@ func TestScheduler_ScheduleTask(t *testing.T) {
 
 	testErr := errors.New("unable to schedule")
 
-	mock.amqp.EXPECT().PublishDelayed(gomock.Any(), 0*time.Second, map[string]interface{}{
-		taskTypeHeader: types.TaskTypeDummy,
-	}).Return(testErr).Times(1)
+	mock.amqp.EXPECT().PublishDelayed(gomock.Any(), 0*time.Second, types.TaskTypeDummy).Return(testErr).Times(1)
 
 	err = scheduler.ScheduleTask(types.TaskTypeDummy, new(types.Task))
 	require.Error(t, err)
 	require.Equal(t, testErr, err)
 
-	mock.amqp.EXPECT().PublishDelayed(gomock.Any(), 0*time.Second, map[string]interface{}{
-		taskTypeHeader: types.TaskTypeCommand,
-	}).Return(nil).Times(1)
+	mock.amqp.EXPECT().PublishDelayed(gomock.Any(), 0*time.Second, types.TaskTypeCommand).Return(nil).Times(1)
 	mock.metrics.EXPECT().AddScheduled(types.TaskTypeCommand)
 
 	err = scheduler.ScheduleTask(types.TaskTypeCommand, new(types.Task))
@@ -101,19 +97,13 @@ func TestScheduler_Run(t *testing.T) {
 		scheduler.listen()
 	}()
 
-	deliveryChan <- delivery(mock.ack, new(types.Task), map[string]interface{}{
-		taskTypeHeader: types.TaskTypeDummy,
-	})
+	deliveryChan <- delivery(mock.ack, new(types.Task), types.TaskTypeDummy)
 
-	deliveryChan <- delivery(mock.ack, new(types.Task), map[string]interface{}{
-		taskTypeHeader: types.TaskTypeCommand,
-	})
+	deliveryChan <- delivery(mock.ack, new(types.Task), types.TaskTypeCommand)
 
-	deliveryChan <- delivery(mock.ack, nil, map[string]interface{}{
-		taskTypeHeader: types.TaskTypeDummy,
-	})
+	deliveryChan <- delivery(mock.ack, nil, types.TaskTypeDummy)
 
-	deliveryChan <- delivery(mock.ack, nil, nil)
+	deliveryChan <- delivery(mock.ack, nil, "")
 
 	close(deliveryChan)
 	wg.Wait()
@@ -128,7 +118,7 @@ func TestScheduler_ReceiveNotifications(t *testing.T) {
 
 	deliveryChan := make(chan amqp.Delivery)
 
-	mock.amqp.EXPECT().ConsumeNotifications().Return(deliveryChan, nil).Times(1)
+	mock.amqp.EXPECT().ConsumeNotifications(gomock.Any()).Return(deliveryChan, nil).Times(1)
 
 	testMessage := &types.ExecutionInfo{
 		Duration: 5,
@@ -171,7 +161,7 @@ func setup(controller *gomock.Controller) (*Scheduler, testMocks) {
 
 	return NewScheduler(Params{
 			Executors: []types.Executor{executors.NewDummy(zap.NewNop())},
-			Bus:       Amqp,
+			Backend:   Amqp,
 			Log:       zap.NewNop(),
 			Metrics:   metrics,
 		}), testMocks{
@@ -181,7 +171,7 @@ func setup(controller *gomock.Controller) (*Scheduler, testMocks) {
 		}
 }
 
-func delivery(ack amqp.Acknowledger, task *types.Task, headers map[string]interface{}) amqp.Delivery {
+func delivery(ack amqp.Acknowledger, task *types.Task, taskType string) amqp.Delivery {
 	var bytes []byte
 	if task != nil {
 		bytes, _ = json.Marshal(task)
@@ -189,7 +179,7 @@ func delivery(ack amqp.Acknowledger, task *types.Task, headers map[string]interf
 
 	return amqp.Delivery{
 		Acknowledger: ack,
-		Headers:      headers,
+		Type:         taskType,
 		Timestamp:    time.Time{},
 		Body:         bytes,
 	}

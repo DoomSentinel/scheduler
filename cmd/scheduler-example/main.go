@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	tasksCount       = 10000
+	tasksCount       = 15000
 	remoteTasksCount = 10
 )
 
 func main() {
 	//Opinionated defaults
-	host := pflag.String("host", "0.0.0.0", "scheduler address")
+	host := pflag.String("host", "localhost", "scheduler address")
 	port := pflag.Int("port", 8245, "connection TCP port")
 	pflag.Parse()
 

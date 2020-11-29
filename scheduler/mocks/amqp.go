@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	amqp "github.com/streadway/amqp"
 	reflect "reflect"
@@ -35,18 +36,18 @@ func (m *MockAMQP) EXPECT() *MockAMQPMockRecorder {
 }
 
 // ConsumeNotifications mocks base method
-func (m *MockAMQP) ConsumeNotifications() (<-chan amqp.Delivery, error) {
+func (m *MockAMQP) ConsumeNotifications(arg0 context.Context) (<-chan amqp.Delivery, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConsumeNotifications")
+	ret := m.ctrl.Call(m, "ConsumeNotifications", arg0)
 	ret0, _ := ret[0].(<-chan amqp.Delivery)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ConsumeNotifications indicates an expected call of ConsumeNotifications
-func (mr *MockAMQPMockRecorder) ConsumeNotifications() *gomock.Call {
+func (mr *MockAMQPMockRecorder) ConsumeNotifications(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsumeNotifications", reflect.TypeOf((*MockAMQP)(nil).ConsumeNotifications))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsumeNotifications", reflect.TypeOf((*MockAMQP)(nil).ConsumeNotifications), arg0)
 }
 
 // ConsumeTasks mocks base method
@@ -65,7 +66,7 @@ func (mr *MockAMQPMockRecorder) ConsumeTasks() *gomock.Call {
 }
 
 // PublishDelayed mocks base method
-func (m *MockAMQP) PublishDelayed(arg0 []byte, arg1 time.Duration, arg2 map[string]interface{}) error {
+func (m *MockAMQP) PublishDelayed(arg0 []byte, arg1 time.Duration, arg2 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PublishDelayed", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

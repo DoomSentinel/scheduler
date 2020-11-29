@@ -34,7 +34,7 @@ services:
       ports:
         - "8245:8245"
         - "8457:8457"
-      command: ["./wait-for-rabbit.sh", "http://guest:guest@rabbitmq:15672/api", "./application"]
+      command: ./wait-for-it.sh rabbitmq:5672 --timeout=60 --strict -- ./application
   prometheus:
     build: './build/prometheus'
     container_name: 'prometheus'

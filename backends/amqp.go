@@ -1,10 +1,11 @@
-package bus
+package backends
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -13,16 +14,15 @@ import (
 )
 
 var Module = fx.Provide(
-	NewAMQPMessageBus,
+	NewAMQPMessageBackend,
 )
 
 type (
 	AMQP struct {
 		writeSession *session
 		readSession  *session
-
-		log        *zap.Logger
-		shutdowner fx.Shutdowner
+		log          *zap.Logger
+		shutdowner   fx.Shutdowner
 	}
 	session struct {
 		*amqp.Connection
@@ -40,7 +40,7 @@ const (
 	NotificationsExchange = "notifications_fanout"
 )
 
-func NewAMQPMessageBus(lc fx.Lifecycle, shutdowner fx.Shutdowner, conf config.AMQPConfig, log *zap.Logger) (*AMQP, error) {
+func NewAMQPMessageBackend(lc fx.Lifecycle, shutdowner fx.Shutdowner, conf config.AMQPConfig, log *zap.Logger) (*AMQP, error) {
 	dsn := fmt.Sprintf("amqp://%s:%s@%s:%d/", conf.User, conf.Password, conf.Host, conf.Port)
 	writeSession, err := newSession(dsn)
 	if err != nil {
@@ -76,24 +76,27 @@ func NewAMQPMessageBus(lc fx.Lifecycle, shutdowner fx.Shutdowner, conf config.AM
 	return bus, nil
 }
 
-func (a *AMQP) PublishDelayed(body []byte, delay time.Duration, headers map[string]interface{}) error {
-	if headers == nil {
-		headers = make(map[string]interface{})
-	}
-	headers["x-delay"] = delay.Milliseconds()
-
-	return a.writeSession.Publish(
+func (a *AMQP) PublishDelayed(body []byte, delay time.Duration, messageType string) error {
+	err := a.writeSession.Publish(
 		DelayedExchange, // exchange
 		DelayedQueue,    // routing key
 		false,
 		false,
 		amqp.Publishing{
-			ContentType:  "application/json",
-			Headers:      headers,
+			ContentType: "application/json",
+			Headers: map[string]interface{}{
+				"x-delay": delay.Milliseconds(),
+			},
 			Body:         body,
 			Timestamp:    time.Now().UTC(),
 			DeliveryMode: amqp.Persistent,
+			Type:         messageType,
 		})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (a *AMQP) PublishNotification(body []byte) error {
@@ -108,7 +111,7 @@ func (a *AMQP) PublishNotification(body []byte) error {
 		})
 }
 
-func (a *AMQP) ConsumeNotifications() (<-chan amqp.Delivery, error) {
+func (a *AMQP) ConsumeNotifications(ctx context.Context) (<-chan amqp.Delivery, error) {
 	queue, err := a.readSession.QueueDeclare("", false, true, true, false, nil)
 	if err != nil {
 		return nil, err
@@ -118,7 +121,21 @@ func (a *AMQP) ConsumeNotifications() (<-chan amqp.Delivery, error) {
 		return nil, err
 	}
 
-	return a.readSession.Consume(queue.Name, "", true, true, false, false, nil)
+	consumer := uuid.New().String()
+	consumeChan, err := a.readSession.Consume(queue.Name, consumer, true, true, false, false, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		<-ctx.Done()
+		err := a.readSession.Cancel(consumer, false)
+		if err != nil {
+			a.log.Error("failed to cancel temp consumer", zap.Error(err), zap.String("consumerID", consumer))
+		}
+	}()
+
+	return consumeChan, nil
 }
 
 func (a *AMQP) ConsumeTasks() (<-chan amqp.Delivery, error) {

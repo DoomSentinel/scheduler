@@ -21,7 +21,7 @@ can be scheduled up to ~47days from its publication date
 ## Installation
 
 ``
-docker-compose up -d --build
+docker-compose up -d --build --remove-orphans
 ``
 
 By default, service will be available on port ``8245`` via grpc, monitoring via 

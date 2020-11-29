@@ -1,7 +1,7 @@
 default: build
 
 run:
-	docker-compose up -d --build
+	docker-compose up -d --build --remove-orphans
 
 install:
 	@go get github.com/golang/mock/mockgen@v1.4.3

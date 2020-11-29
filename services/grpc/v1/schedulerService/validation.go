@@ -1,4 +1,4 @@
-package scheduler_service
+package schedulerService
 
 import (
 	"context"
