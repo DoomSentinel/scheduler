@@ -33,12 +33,7 @@ func main() {
 	}()
 	ctx := context.Background()
 	app := fx.New(
-		config.Module,
-		monitoring.Module,
-		fx.Populate(&logger),
-		backends.Module,
-		services.Module,
-		fx.Invoke(services.Run),
+		app,
 	)
 	err := app.Start(ctx)
 	if err != nil {
